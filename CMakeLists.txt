@@ -53,7 +53,7 @@ add_executable(simulationExecutable.out dDimensionalSimulation.cpp)
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
     target_link_libraries(simulationExecutable.out ${myLibs} ${CUDA_LIBRARIES} "/usr/local/cuda/lib64/libnvToolsExt.so")
 else()
-target_link_libraries(simulationExecutable.out ${myLibs} ${CUDA_LIBRARIES})
+target_link_libraries(simulationExecutable.out ${myLibs} ${CUDA_LIBRARIES} gomp)
 endif(${CMAKE_BUILD_TYPE} MATCHES "Debug")
 
 add_executable(otherExecutable.out cubicLatticeNematic.cpp)
