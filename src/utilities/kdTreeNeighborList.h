@@ -13,6 +13,7 @@ class kdTreeNeighborList : public baseNeighborList
         //!basic constructor has a box and a range. pbc ONLY WORKS for hypercubes
         kdTreeNeighborList(scalar range, BoxPtr _box, double epsilon, bool pbc = true)
             {
+            saveDistanceData = true;
             kdTree.radius = range;
             kdTree.epsilon = epsilon;
             dVec bds;

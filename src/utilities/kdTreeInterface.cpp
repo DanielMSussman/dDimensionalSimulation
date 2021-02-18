@@ -97,11 +97,18 @@ void kdTreeInterface::findNeighbors(int N, dVec *points)
 
         //insert all neighbor indicies into data structure
         allNeighbors[ii].clear();
+        std::vector<int> ptNeighs;
         int nNeighs = pointNeighs.size();
-        if(nNeighs > maximumNeighborNum) maximumNeighborNum = nNeighs;
         for (int jj = 0; jj < nNeighs; ++jj)
             {
-            allNeighbors[ii].push_back(boost::get<1>(pointNeighs[jj]));
+            int idx = (boost::get<1>(pointNeighs[jj]));
+            if(idx != ii)
+                ptNeighs.push_back(idx);
             }
+        std::sort(ptNeighs.begin(),ptNeighs.end());
+        ptNeighs.erase( unique(ptNeighs.begin(),ptNeighs.end() ), ptNeighs.end()  );
+        nNeighs = ptNeighs.size();
+        if(nNeighs > maximumNeighborNum) maximumNeighborNum = nNeighs;
+        allNeighbors[ii] = ptNeighs;
         };
     };

@@ -19,6 +19,7 @@
 #include "indexer.h"
 #include "hyperrectangularCellList.h"
 #include "neighborList.h"
+#include "kdTreeNeighborList.h"
 #include "poissonDiskSampling.h"
 
 using namespace std;
@@ -129,7 +130,12 @@ int main(int argc, char*argv[])
     scalar ke = Configuration->setVelocitiesMaxwellBoltzmann(Temperature,noise);
     printf("temperature input %f \t temperature calculated %f\n",Temperature,Configuration->computeInstantaneousTemperature());
 
-    shared_ptr<neighborList> neighList = make_shared<neighborList>(1.,PBC,1);
+    double range = 1.0;
+    double epsilon = 0.0;
+    shared_ptr<neighborList> neighList = make_shared<neighborList>(range,PBC,1);
+    shared_ptr<kdTreeNeighborList> kdNeighList = make_shared<kdTreeNeighborList>(range,PBC,epsilon,true);
+
+
      //monodisperse harmonic spheres
     shared_ptr<harmonicRepulsion> softSpheres = make_shared<harmonicRepulsion>();
     softSpheres->setMonodisperse();
@@ -192,6 +198,20 @@ for (int ii = 0; ii < maximumIterations; ++ii) sim->performTimestep();
     cudaProfilerStop();
     clock_t t2 = clock();
     sim->setCPUOperation(true);
+
+    kdNeighList->computeNeighborLists(Configuration->returnPositions());
+    neighList->computeNeighborLists(Configuration->returnPositions());
+
+    {
+        ArrayHandle<unsigned int> npp1(kdNeighList->neighborsPerParticle);
+        ArrayHandle<unsigned int> npp2(neighList->neighborsPerParticle);
+    printf("pidx, kdTree neighs found, cellList neighs found\n");
+    for(int ii = 0; ii < N; ++ii)
+        {
+        printf("%i\t %i\t%i\n",ii,npp1.data[ii],npp2.data[ii]);
+        }
+    }
+
     scalar E = sim->computePotentialEnergy();
     printf("simulation potential energy at %f\n",E);
 
