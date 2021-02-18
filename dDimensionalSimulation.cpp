@@ -211,7 +211,8 @@ for (int ii = 0; ii < maximumIterations; ++ii) sim->performTimestep();
         printf("%i\t %i\t%i\n",ii,npp1.data[ii],npp2.data[ii]);
         }
     }
-
+    kdNeighList->printNeighborInfo(Configuration->returnPositions(),0);
+    neighList->printNeighborInfo(Configuration->returnPositions(),0);
     scalar E = sim->computePotentialEnergy();
     printf("simulation potential energy at %f\n",E);
 

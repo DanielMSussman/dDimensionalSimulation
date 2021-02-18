@@ -23,6 +23,22 @@ class baseNeighborList
                 }
             };
 
+        void printNeighborInfo(GPUArray<dVec> &points, int idx)
+            {
+            ArrayHandle<dVec> p(points);
+            cout << "particlePosition:" << endl;
+            printdVec(p.data[idx]);
+            ArrayHandle<unsigned int> npp(neighborsPerParticle);
+            ArrayHandle<int> ns(particleIndices);
+            cout <<"indices: " << endl;
+            for (int i=0; i< npp.data[idx]; ++i)
+                {
+                int nIdx = ns.data[neighborIndexer(i,idx)];
+                cout << nIdx << " ";
+                printdVec(p.data[nIdx]);
+                }
+            cout << endl;
+            };
         //!Enforce GPU operation
         virtual void setGPU(bool _useGPU=true){
             useGPU = _useGPU;
