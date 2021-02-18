@@ -1,6 +1,7 @@
 #ifndef kdTreeInterface_h
 #define kdTreeInterface_h
 
+#include "dDimensionalVectorTypes.h"
 //! Access the d-dimensional range searching of CGAL
 /*! A class for interfacing with the CGAL library's d-dimensional spatial searching functionality.
 In particular, we make use of (potentially fuzzy) spherical range searching in the context of k-d tree neighbor searching
@@ -18,6 +19,7 @@ class kdTreeInterface
         double boxLength;
         bool periodicBoundary;
         std::vector< std::vector<int> > allNeighbors;
+        int maximumNeighborNum;
         bool binaryVecIterate(std::vector<int> &v);
     };
 #endif

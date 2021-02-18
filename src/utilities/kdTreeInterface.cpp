@@ -45,8 +45,8 @@ void kdTreeInterface::findNeighbors(int N, dVec *points)
     for (int ii = 0; ii < N; ++ii)
         {
         indices[ii]=ii;
-        for (int dd = 0; dd < DIMENSION; ++dd)
-            pts[ii][dd] = points[ii].x[dd];
+        Point_d tempPoint(points[ii].x + 0,points[ii].x + DIMENSION);
+        pts[ii] = tempPoint;
         }
     Tree tree(boost::make_zip_iterator(boost::make_tuple( pts.begin(),indices.begin() )),
               boost::make_zip_iterator(boost::make_tuple( pts.end(),indices.end() ) )
@@ -56,7 +56,7 @@ void kdTreeInterface::findNeighbors(int N, dVec *points)
     //find neighbors
     Point_and_int periodicPoint;
     allNeighbors.resize(N);
-    int maximumNeighborNum = 0;
+    maximumNeighborNum = 0;
     for (int ii = 0; ii < N; ++ii)
         {
         std::vector<Point_and_int> pointNeighs; pointNeighs.reserve(30);
@@ -69,22 +69,27 @@ void kdTreeInterface::findNeighbors(int N, dVec *points)
             std::vector<int> nearbyBoundaries;
             for (int dd = 0; dd < DIMENSION;++dd)
                 {
-                if(boxLength-boost::get<0>(pts[ii])[dd]<radius+epsilon)
+                if(boxLength-pts[ii][dd]<radius+epsilon)
                     nearbyBoundaries.push_back(dd+1);
-                if(boost::get<0>(pts[ii])[dd]<radius+epsilon)
+                if(pts[ii][dd]<radius+epsilon)
                     nearbyBoundaries.push_back(-(dd+1));
                 }
 
             std::vector<int> periodicCombinations(nearbyBoundaries.size(),0);
             while(binaryVecIterate(periodicCombinations))
                 {
+                double originalPoint[DIMENSION];
+                std::copy(std::begin(points[ii].x), std::end(points[ii].x),std::begin(originalPoint));
                 Point_and_int pbcPoint = pts[ii];
                 for (int jj = 0; jj < nearbyBoundaries.size(); ++jj)
                     {
                     int coordinateIndex = abs(nearbyBoundaries[jj])-1;
                     double  sgn = (nearbyBoundaries[jj] > 0) ? 1. : -1.;
-                    boost::get<0>(pbcPoint)[coordinateIndex] += periodicCombinations[jj]*sgn*boxLength;
+                    originalPoint[coordinateIndex] += periodicCombinations[jj]*sgn*boxLength;
+
                     }
+                Point_d tempPoint(originalPoint + 0,originalPoint+ DIMENSION);
+                boost::get<0>(pbcPoint) = tempPoint;
                 Fuzzy_sphere sphereSearch2(pbcPoint,radius,epsilon);
                 tree.search(back_inserter(pointNeighs),sphereSearch2);
                 };
