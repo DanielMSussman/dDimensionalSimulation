@@ -33,7 +33,7 @@ class kdTreeNeighborList : public baseNeighborList
         //! compute via GPU
         virtual void computeGPU(GPUArray<dVec> &points)
             {
-            std::cout << "GPU routine not available for kdTree -- defaulting to CPU method" << std::endl;
+//            std::cout << "GPU routine not available for kdTree -- defaulting to CPU method" << std::endl;
             computeCPU(points);
             }
         //! compute via CPU

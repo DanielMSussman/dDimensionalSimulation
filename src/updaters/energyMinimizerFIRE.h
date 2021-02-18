@@ -43,6 +43,8 @@ class energyMinimizerFIRE : public velocityVerlet
         void setDeltaT(scalar dt){deltaT = dt;deltaTMin=dt*.01;};
         //!set the initial value of alpha and alphaStart
         void setAlphaStart(scalar as){alphaStart = as;alpha = as;};
+        //!Set the miniumum deltaT
+        void setDeltaTMin(scalar tmax){deltaTMin = tmax;};
         //!Set the maximum deltaT
         void setDeltaTMax(scalar tmax){deltaTMax = tmax;};
         //!Set the fraction by which delta increments
@@ -51,6 +53,7 @@ class energyMinimizerFIRE : public velocityVerlet
         void setDeltaTDec(scalar dtc){deltaTDec = dtc;};
         //!Set the fraction by which alpha decrements
         void setAlphaDec(scalar ad){alphaDec = ad;};
+        void setAlphaMin(scalar ad){alphaMin = ad;};
         //!Set the number of consecutive steps P must be non-negative before increasing delatT
         void setNMin(int nm){NMin = nm;};
 

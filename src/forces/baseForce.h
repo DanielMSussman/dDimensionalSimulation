@@ -4,7 +4,7 @@
 #include "std_include.h"
 #include "simpleModel.h"
 #include "basicSimulation.h"
-#include "neighborList.h"
+#include "baseNeighborList.h"
 
 /*! \file baseForce.h */
 //!A base class for implementing force calculations
@@ -57,10 +57,10 @@ class force
         bool useNeighborList;
 
         //!a pointer to a neighbor list the force might use
-        shared_ptr<neighborList> neighbors;
+        shared_ptr<baseNeighborList> neighbors;
 
         //!tell the force to use a neighbor list
-        void setNeighborList(shared_ptr<neighborList> _neighbor){neighbors = _neighbor;useNeighborList = true;};
+        void setNeighborList(shared_ptr<baseNeighborList> _neighbor){neighbors = _neighbor;useNeighborList = true;};
         //!allow for setting multiple threads
         virtual void setNThreads(int n){nThreads = n;};
         //!number of threads to use if compiled with openmp

@@ -58,7 +58,7 @@ int main(int argc, char*argv[])
     ValueArg<int> nSwitchArg("n","Number","number of particles in the simulation",false,100,"int",cmd);
     ValueArg<int> maxIterationsSwitchArg("i","iterations","number of timestep iterations",false,100,"int",cmd);
     ValueArg<scalar> lengthSwitchArg("l","sideLength","size of simulation domain",false,10.0,"double",cmd);
-    ValueArg<scalar> temperatureSwitchArg("t","temperature","temperature of simulation",false,.001,"double",cmd);
+    ValueArg<scalar> temperatureSwitchArg("t","temperature","temperature of simulation",false,.00,"double",cmd);
 
     //allow setting of system size by either volume fraction or density (assuming N has been set)
     scalar phiDest = 1.90225*exp(-(scalar)DIMENSION / 2.51907);
@@ -108,24 +108,6 @@ int main(int argc, char*argv[])
     sim->setBox(PBC);
 
     noiseSource noise(true);
-    /*
-    //after the simulation box has been set, we can set particle positions...do so via poisson disk sampling?
-    vector<dVec> poissonPoints;
-    scalar diameter = .75;
-    clock_t tt1=clock();
-    int loopCount = 0;
-    while(poissonPoints.size() != N)
-        {
-        poissonDiskSampling(N,diameter,poissonPoints,noise,PBC);
-        loopCount +=1;
-         diameter *= 0.95;
-        }
-    clock_t tt2=clock();
-    scalar seedingTimeTaken = (tt2-tt1)/(scalar)CLOCKS_PER_SEC;
-    cout << "disk sampling took "<< loopCount << " diameter attempts and took " << seedingTimeTaken << " total seconds" <<endl;
-
-    Configuration->setParticlePositions(poissonPoints);
-    */
     Configuration->setParticlePositionsRandomly(noise);
     scalar ke = Configuration->setVelocitiesMaxwellBoltzmann(Temperature,noise);
     printf("temperature input %f \t temperature calculated %f\n",Temperature,Configuration->computeInstantaneousTemperature());
@@ -144,27 +126,12 @@ int main(int argc, char*argv[])
     softSpheres->setForceParameters(stiffnessParameters);
     sim->addForce(softSpheres,Configuration);
     cout << "simulation set-up finished" << endl;cout.flush();
-    /*
-    //kob-anderson 80:20 mixture
-    {
-    ArrayHandle<int> h_t(Configuration->returnTypes());
-    for (int ii = 0; ii < N; ++ii)
-        if(ii < 0.8*N)
-            h_t.data[ii] = 0;
-        else
-            h_t.data[ii] = 1;
-    }
-    shared_ptr<lennardJones6_12> lj = make_shared<lennardJones6_12>();
-    lj->setNeighborList(neighList);
-    vector<scalar> ljParams(8);
-    ljParams[0]=1.0;ljParams[1]=1.5;ljParams[2]=1.5;ljParams[3]=0.5;
-    ljParams[4]=1.0;ljParams[5]=0.8;ljParams[6]=0.8;ljParams[7]=0.88;
-    lj->setForceParameters(ljParams);
-    sim->addForce(lj,Configuration);
-    */
 
     shared_ptr<noseHooverNVT> nvt = make_shared<noseHooverNVT>(Configuration,Temperature);
     nvt->setDeltaT(1e-2);
+    shared_ptr<energyMinimizerFIRE> fire = make_shared<energyMinimizerFIRE>(Configuration);
+    fire->initializeParameters();
+    fire->setForceCutoff(1e-10);
     sim->addUpdater(nvt,Configuration);
 
     if(gpuSwitch >=0)
@@ -189,7 +156,7 @@ for (int ii = 0; ii < maximumIterations; ++ii) sim->performTimestep();
             dt += 1;
             scalar newdt = pow(10,dt);
             //nvt->setDeltaT(newdt);
-            cout << "setting new timestep size of " <<newdt << endl;
+            //cout << "setting new timestep size of " <<newdt << endl;
             }
         sim->performTimestep();
         if(timestep%100 == 0)
@@ -197,6 +164,44 @@ for (int ii = 0; ii < maximumIterations; ++ii) sim->performTimestep();
         };
     cudaProfilerStop();
     clock_t t2 = clock();
+
+    cout << endl << endl <<  "soft-sphere push-off done" << endl << endl;
+    /*
+    //kob-anderson 80:20 mixture
+    {
+    ArrayHandle<int> h_t(Configuration->returnTypes());
+    for (int ii = 0; ii < N; ++ii)
+        if(ii < 0.8*N)
+            h_t.data[ii] = 0;
+        else
+            h_t.data[ii] = 1;
+    }
+    */
+    shared_ptr<lennardJones6_12> lj = make_shared<lennardJones6_12>();
+    range = 2.5;
+    epsilon = 0.0;
+    shared_ptr<kdTreeNeighborList> kdNeighs = make_shared<kdTreeNeighborList>(range,PBC,epsilon,true);
+    shared_ptr<neighborList> cellNeighs = make_shared<neighborList>(range,PBC,1);
+    lj->setNeighborList(kdNeighs);
+    //vector<scalar> ljParams(8);
+    //ljParams[0]=1.0;ljParams[1]=1.5;ljParams[2]=1.5;ljParams[3]=0.5;
+    //ljParams[4]=1.0;ljParams[5]=0.8;ljParams[6]=0.8;ljParams[7]=0.88;
+    vector<double> ljParams(2,1.0);
+    ljParams[1]=pow(2,1./6.);
+    lj->setForceParameters(ljParams);
+    sim->clearForceComputers();
+    sim->addForce(lj,Configuration);
+    sim->setCPUOperation(false);
+    nvt->setDeltaT(0.001);
+
+    for (int timestep = 0; timestep < maximumIterations; ++timestep)
+        {
+        sim->performTimestep();
+        if(timestep%100 == 0)
+            printf("timestep %i: target T = %f\t instantaneous T = %g\t PE = %g\t nlist max = %i\n",timestep,Temperature,Configuration->computeInstantaneousTemperature(),sim->computePotentialEnergy(),neighList->Nmax);
+        };
+
+
     sim->setCPUOperation(true);
 
     kdNeighList->computeNeighborLists(Configuration->returnPositions());
@@ -208,7 +213,7 @@ for (int ii = 0; ii < maximumIterations; ++ii) sim->performTimestep();
     printf("pidx, kdTree neighs found, cellList neighs found\n");
     for(int ii = 0; ii < N; ++ii)
         {
-        printf("%i\t %i\t%i\n",ii,npp1.data[ii],npp2.data[ii]);
+        //printf("%i\t %i\t%i\n",ii,npp1.data[ii],npp2.data[ii]);
         }
     }
     kdNeighList->printNeighborInfo(Configuration->returnPositions(),0);
@@ -220,13 +225,13 @@ for (int ii = 0; ii < maximumIterations; ++ii) sim->performTimestep();
     cout << endl << "simulations took " << timeTaken << " per time step" << endl << endl;
 
     //neighList->nlistTuner->printTimingData();
+/*
     ofstream ofs;
     char dataname[256];
     sprintf(dataname,"../data/timing_d%i_g%i.txt",DIMENSION,gpuSwitch);
     ofs.open(dataname,ofstream::app);
     ofs << N <<"\t" << timeTaken << "\n";
     ofs.close();
-/*
     t1 = clock();
     neighList->computeNeighborLists(Configuration->returnPositions());
     t2 = clock();

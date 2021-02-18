@@ -2,6 +2,7 @@
 #define baseneighborList_H
 
 #include "kernelTuner.h"
+#include "indexer.h"
 /*! \file baseneighborList.h */
 //!take a set of positions, sort those positions according to a cellList, and create data structures of possible neighbors of each particle
 class baseNeighborList
