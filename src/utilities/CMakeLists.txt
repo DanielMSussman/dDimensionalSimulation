@@ -4,6 +4,7 @@ endif(${CMAKE_BUILD_TYPE} MATCHES "Debug")
 
 include_directories(${CMAKE_SOURCE_DIR}/inc ${CUDA_INCLUDE_DIRS})
 add_library(utility 
+    kdTreeInterface.cpp
     hyperrectangularCellList.cpp
     kernelTuner.cpp
     noiseSource.cpp 
