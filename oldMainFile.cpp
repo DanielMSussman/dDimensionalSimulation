@@ -47,7 +47,7 @@ double estimateEnergy(shared_ptr<simpleModel> conf, shared_ptr<kdTreeNeighborLis
     return sim->computePotentialEnergy();
     }
 
-void estimateTrueEnergy(shared_ptr<simpleModel> conf, shared_ptr<baseNeighborList> nl, shared_ptr<kdTreeNeighborList> nlEst,shared_ptr<force> f,double &e, double &eEst)
+void estimateTrueEnergy(shared_ptr<simpleModel> conf, shared_ptr<kdTreeNeighborList> nl, shared_ptr<kdTreeNeighborList> nlEst,shared_ptr<force> f,double &e, double &eEst)
     {
     shared_ptr<Simulation> sim = make_shared<Simulation>();
     sim->setConfiguration(conf);
@@ -81,8 +81,7 @@ int main(int argc, char*argv[])
     ValueArg<int> programSwitchArg("z","programSwitch","an integer controlling program branch",false,0,"int",cmd);
     ValueArg<int> gpuSwitchArg("g","USEGPU","an integer controlling which gpu to use... g < 0 uses the cpu",false,-1,"int",cmd);
     ValueArg<int> nSwitchArg("n","Number","number of particles in the simulation",false,100,"int",cmd);
-    ValueArg<int> initialIterationsSwitchArg("i","iterations","number of timestep iterations",false,100,"int",cmd);
-    ValueArg<int> maxIterationsSwitchArg("j","otherIterations","number of timestep iterations",false,100,"int",cmd);
+    ValueArg<int> maxIterationsSwitchArg("i","iterations","number of timestep iterations",false,100,"int",cmd);
     ValueArg<scalar> lengthSwitchArg("l","sideLength","size of simulation domain",false,10.0,"double",cmd);
     ValueArg<scalar> temperatureSwitchArg("t","temperature","temperature of simulation",false,.00,"double",cmd);
 
@@ -95,8 +94,7 @@ int main(int argc, char*argv[])
 
     int programSwitch = programSwitchArg.getValue();
     int N = nSwitchArg.getValue();
-    int maximumIterations = initialIterationsSwitchArg.getValue();
-    int iterations = maxIterationsSwitchArg.getValue();
+    int maximumIterations = maxIterationsSwitchArg.getValue();
     scalar L = lengthSwitchArg.getValue();
     scalar Temperature = temperatureSwitchArg.getValue();
     scalar phi = phiSwitchArg.getValue();
@@ -169,6 +167,8 @@ int main(int argc, char*argv[])
 //        fire->setGPU();
 //        neighList->setGPU();
         };
+for (int ii = 0; ii < maximumIterations; ++ii) sim->performTimestep();
+//neighList->nlistTuner->printTimingData();
 
     clock_t t1 = clock();
     cudaProfilerStart();
@@ -176,6 +176,13 @@ int main(int argc, char*argv[])
     scalar dt=-12;
     for (int timestep = 0; timestep < maximumIterations; ++timestep)
         {
+        if(timestep %1000 ==0 && dt < -3)
+            {
+            dt += 1;
+            scalar newdt = pow(10,dt);
+            //nvt->setDeltaT(newdt);
+            //cout << "setting new timestep size of " <<newdt << endl;
+            }
         sim->performTimestep();
         if(timestep%100 == 0)
             printf("timestep %i: target T = %f\t instantaneous T = %g\t PE = %g\t nlist max = %i\n",timestep,Temperature,Configuration->computeInstantaneousTemperature(),sim->computePotentialEnergy(),neighList->Nmax);
@@ -183,51 +190,102 @@ int main(int argc, char*argv[])
     cudaProfilerStop();
     clock_t t2 = clock();
 
-    cout << endl << endl <<  "intialization done" << endl << endl;
-
+    cout << endl << endl <<  "soft-sphere push-off done" << endl << endl;
+    /*
+    //kob-anderson 80:20 mixture
+    {
+    ArrayHandle<int> h_t(Configuration->returnTypes());
+    for (int ii = 0; ii < N; ++ii)
+        if(ii < 0.8*N)
+            h_t.data[ii] = 0;
+        else
+            h_t.data[ii] = 1;
+    }
+    */
+    shared_ptr<lennardJones6_12> lj = make_shared<lennardJones6_12>();
+    range = 2.5;
+    epsilon = 0.0;
     shared_ptr<kdTreeNeighborList> kdNeighs = make_shared<kdTreeNeighborList>(range,PBC,epsilon,true);
+    shared_ptr<neighborList> cellNeighs = make_shared<neighborList>(range,PBC,1);
+    lj->setNeighborList(kdNeighs);
+    //vector<scalar> ljParams(8);
+    //ljParams[0]=1.0;ljParams[1]=1.5;ljParams[2]=1.5;ljParams[3]=0.5;
+    //ljParams[4]=1.0;ljParams[5]=0.8;ljParams[6]=0.8;ljParams[7]=0.88;
+    vector<double> ljParams(2,1.0);
+    
+    //ljParams[1]=pow(2,1./6.);
+    
+    lj->setForceParameters(ljParams);
+    sim->clearForceComputers();
+    sim->addForce(lj,Configuration);
+    shared_ptr<noseHooverNVT> nvt2 = make_shared<noseHooverNVT>(Configuration,Temperature,2);
+    sim->clearUpdaters();
+    sim->addUpdater(nvt2,Configuration);
+    nvt2->setDeltaT(0.0001);
+    sim->setCPUOperation(false);
 
     double pe;
     double peEst;
     double peLast=0;
     double peLastEst=0;
-    double rangeEst = 1.;
-    double epsilonEst = .1;
+    double rangeEst = pow(2,1./6.);
+    double epsilonEst = .5;
+    rangeEst=2.5-epsilonEst;
+
 
     char filename[256];
     sprintf(filename,"../data/test_N%i.txt",N);
     ofstream myfile;
     myfile.open(filename);
 
-    sim->setCPUOperation(true);
 
-    for (int timestep = 0; timestep < iterations; ++timestep)
+    for (int timestep = 0; timestep < min(1000,maximumIterations); ++timestep)
         {
         if(timestep%100==0)
             {
             printf("timestep %i: target T = %f\t instantaneous T = %g\t PE = %g\t nlist max = %i\n",timestep,Temperature,Configuration->computeInstantaneousTemperature(),sim->computePotentialEnergy(),neighList->Nmax);
             }
         sim->performTimestep();
-        //printf("timestep %i: target T = %f\t instantaneous T = %g\t PE = %g\t nlist max = %i\n",timestep,Temperature,Configuration->computeInstantaneousTemperature(),sim->computePotentialEnergy(),neighList->Nmax);
-        shared_ptr<kdTreeNeighborList> kdNeighEst = make_shared<kdTreeNeighborList>(rangeEst,PBC,epsilonEst,true);
-        estimateTrueEnergy(Configuration,neighList,kdNeighEst,softSpheres,pe,peEst);
+        if(timestep>500)
+            {
+            //printf("timestep %i: target T = %f\t instantaneous T = %g\t PE = %g\t nlist max = %i\n",timestep,Temperature,Configuration->computeInstantaneousTemperature(),sim->computePotentialEnergy(),neighList->Nmax);
+            shared_ptr<kdTreeNeighborList> kdNeighEst = make_shared<kdTreeNeighborList>(rangeEst,PBC,epsilonEst,true);
+            estimateTrueEnergy(Configuration,kdNeighs,kdNeighEst,lj,pe,peEst);
 
-        cout << "true energy = " << pe << " estimated = " << peEst << endl;
-        cout<< " DeltaE - DeltaEEst = " << (pe-peLast)- (peEst-peLastEst) << endl;
-        if(timestep > 0)
-            myfile << (pe-peLast)- (peEst-peLastEst) << "\t" << pe << "\t" << peLast <<"\n";
+            cout << "true energy = " << pe << " estimated = " << peEst << endl;
+            cout<< " DeltaE - DeltaEEst = " << (pe-peLast)- (peEst-peLastEst) << endl;
+        myfile << (pe-peLast)- (peEst-peLastEst) << "\t" << pe << "\t" << peLast <<"\n";
+            }
         peLast = pe;
         peLastEst=peEst;
         };
 
     myfile.close();
 
+    sim->setCPUOperation(true);
+/*
+    kdNeighList->computeNeighborLists(Configuration->returnPositions());
+    neighList->computeNeighborLists(Configuration->returnPositions());
+
+    {
+        ArrayHandle<unsigned int> npp1(kdNeighList->neighborsPerParticle);
+        ArrayHandle<unsigned int> npp2(neighList->neighborsPerParticle);
+    printf("pidx, kdTree neighs found, cellList neighs found\n");
+    for(int ii = 0; ii < N; ++ii)
+        {
+        printf("%i\t %i\t%i\n",ii,npp1.data[ii],npp2.data[ii]);
+        }
+    }
+    kdNeighList->printNeighborInfo(Configuration->returnPositions(),0);
+    neighList->printNeighborInfo(Configuration->returnPositions(),0);
+*/
     scalar E = sim->computePotentialEnergy();
     printf("simulation potential energy at %f\n",E);
 
     scalar timeTaken = (t2-t1)/(scalar)CLOCKS_PER_SEC/maximumIterations;
     cout << endl << "simulations took " << timeTaken << " per time step" << endl << endl;
 
+    //neighList->nlistTuner->printTimingData();
 /*
     ofstream ofs;
     char dataname[256];

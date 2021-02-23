@@ -21,6 +21,8 @@ class harmonicRepulsion : public basePairwiseForce
 
         virtual void computeForceGPU(GPUArray<dVec> &forces, bool zeroOutForce);
 
+        virtual scalar computeEnergyGPU(){};
+
         virtual void allPairsForceGPU(GPUArray<dVec> &forces, bool zeroOutForce);
 
         void setMonodisperse(){monodisperse = true;};
