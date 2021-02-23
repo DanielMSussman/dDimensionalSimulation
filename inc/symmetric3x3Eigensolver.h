@@ -1,11 +1,7 @@
 #ifndef SymmetricEigensolver3x3_H
 #define SymmetricEigensolver3x3_H
 
-#ifdef NVCC
-#define HOSTDEVICE __host__ __device__ inline
-#else
 #define HOSTDEVICE inline __attribute__((always_inline))
-#endif
 
 #include <vector>
 #include <array>
@@ -422,4 +418,5 @@ void NISymmetricEigensolver3x3::ComputeEigenvector1(scalar a00, scalar a01,
     }
 }
 
+#undef HOSTDEVICE
 #endif

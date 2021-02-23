@@ -136,7 +136,7 @@ HOSTDEVICE scalar eigFromVecs(vector<scalar> &eVec, scalar ev0, scalar ev1, scal
     }
 
 //!get the eigensystem associated with a Q tensor
-HOSTDEVICE void eigensystemOfQ(dVec &q, vector<scalar> &eVals,
+void eigensystemOfQ(dVec &q, vector<scalar> &eVals,
                                 vector<scalar> &eVec1, vector<scalar> &eVec2, vector<scalar> &eVec3)
     {
 
