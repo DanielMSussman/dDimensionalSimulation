@@ -95,6 +95,8 @@ int main(int argc, char*argv[])
     else
         rho = N/pow(L,(scalar)DIMENSION);
 
+    rho = 6.2;
+    L = pow(((scalar)N/rho),(1.0/(scalar) DIMENSION));
 
     int dim =DIMENSION;
     cout << "running a simulation in "<<dim << " dimensions with box sizes " << L << endl;
@@ -169,7 +171,14 @@ int main(int argc, char*argv[])
 //        fire->setGPU();
 //        neighList->setGPU();
         };
-for (int ii = 0; ii < maximumIterations; ++ii) sim->performTimestep();
+    clock_t t0 = clock();
+for (int ii = 0; ii < maximumIterations; ++ii)
+    {
+    sim->performTimestep();
+    clock_t t00 = clock();
+    scalar timeTakenPerStep = (t00-t0)/(scalar)CLOCKS_PER_SEC/maximumIterations;
+    cout << endl << "simulations took " << timeTakenPerStep << " per time step for "<<ii<< " steps" << endl << endl;
+    }
 //neighList->nlistTuner->printTimingData();
 
     clock_t t1 = clock();
