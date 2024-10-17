@@ -27,7 +27,7 @@ __global__ void gpu_propagate_noseHoover_chain_kernel(scalar *kes,
         bath[ii].y *= ef;
         };
 
-    bath[0].z = (2.0*kes[0] - DIMENSION*(Ndof-DIMENSION)*temperature)/bath[0].w;
+    bath[0].z = (2.0*kes[0]/bath[0].w - 1.0);
     scalar ef = exp(-dt8*bath[1].y);
     bath[0].y *= ef;
     bath[0].y += bath[0].z*dt4;
@@ -43,7 +43,7 @@ __global__ void gpu_propagate_noseHoover_chain_kernel(scalar *kes,
     kes[0] = kes[1]*kes[1]*kes[0];
 
     //finally, do the other quarter-timestep of the velocities and accelerations, from 0 to Nchain
-    bath[0].z = (2.0*kes[0] - DIMENSION*(Ndof-DIMENSION)*temperature)/bath[0].w;
+    bath[0].z = (2.0*kes[0]/bath[0].w - 1.0);
     ef = exp(-dt8*bath[1].y);
     bath[0].y *= ef;
     bath[0].y += bath[0].z*dt4;

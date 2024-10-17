@@ -42,7 +42,7 @@ void noseHooverNVT::setT(scalar _t)
     ArrayHandle<scalar4> h_bv(bathVariables);
     //proper mass setting for conserved energy and momentum
     if(Nchain ==1)
-        h_bv.data[0].w = DIMENSION*(Ndof-DIMENSION)*temperature;
+        h_bv.data[0].w = DIMENSION*(Ndof-1)*temperature;
     else
         h_bv.data[0].w = DIMENSION*(Ndof)*temperature;
     for(int ii = 1; ii < Nchain+1; ++ii)
@@ -150,7 +150,7 @@ void noseHooverNVT::propagateChain()
         bath.data[ii].y *= ef;
         };
 
-    bath.data[0].z = (2.0*h_kes.data[0] - DIMENSION*(Ndof-DIMENSION)*temperature)/bath.data[0].w;
+    bath.data[0].z = (2.0*h_kes.data[0]/bath.data[0].w - 1.0);
     scalar ef = exp(-dt8*bath.data[1].y);
     bath.data[0].y *= ef;
     bath.data[0].y += bath.data[0].z*dt4;
@@ -166,7 +166,7 @@ void noseHooverNVT::propagateChain()
     h_kes.data[0] = h_kes.data[1]*h_kes.data[1]*h_kes.data[0];
 
     //finally, do the other quarter-timestep of the velocities and accelerations, from 0 to Nchain
-    bath.data[0].z = (2.0*h_kes.data[0] - DIMENSION*(Ndof-DIMENSION)*temperature)/bath.data[0].w;
+    bath.data[0].z = (2.0*h_kes.data[0]/bath.data[0].w - 1.0);
     ef = exp(-dt8*bath.data[1].y);
     bath.data[0].y *= ef;
     bath.data[0].y += bath.data[0].z*dt4;
