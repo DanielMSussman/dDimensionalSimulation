@@ -40,7 +40,11 @@ void noseHooverNVT::setT(scalar _t)
     {
     temperature = _t;
     ArrayHandle<scalar4> h_bv(bathVariables);
-    h_bv.data[0].w = DIMENSION*(Ndof-DIMENSION)*temperature;
+    //proper mass setting for conserved energy and momentum
+    if(Nchain ==1)
+        h_bv.data[0].w = DIMENSION*(Ndof-DIMENSION)*temperature;
+    else
+        h_bv.data[0].w = DIMENSION*(Ndof)*temperature;
     for(int ii = 1; ii < Nchain+1; ++ii)
         h_bv.data[ii].w = temperature;
 
