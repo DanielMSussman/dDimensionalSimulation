@@ -1,3 +1,5 @@
+Note: This wss an interesting project, but I am starting over with a different / better framework for this concept. Archiving the repo as of Feb 2025
+
 # dDimensionalSimulation
 
 Aa repository that implements simulations in dimension d, where d is specified
